@@ -7,8 +7,8 @@
 //!   [`crate::menus::is_enabled`] predicate the desktop menus use, so they light up and grey out in
 //!   lockstep with the menu bar.
 //! - Save dispatches `file.save`; New / Open / Export dispatch their existing ids.
-//! - The tool options strip is the **existing** `panels::options_bar`, so the active tool's own
-//!   controls (the task's "contextual active-tool options") are the real ones, not a re-creation.
+//! - The tool options strip is the **existing** `panels::options_bar`, wrapped in a horizontal
+//!   scroll area with touch-friendly spacing so wide option sets never clip or overflow on phones.
 //! - The tablet tool rail is the **existing** `panels::toolbar` column, the authoritative
 //!   `TOOL_SECTIONS` grouping with its flyouts, long-press and last-used-tool memory.
 //! - The phone tool sheet lays the same `visible_sections()` slots out in a grid and selects
@@ -101,7 +101,7 @@ pub fn top_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
             let _ = app.run("file.save", serde_json::json!({}));
         }
         if touch_icon(ui, "ellipsis-vertical", true, false, tl!("More")).clicked() {
-            app.ui.mobile.show(Group::Layers); // Placeholder-safe: opens the real panel host.
+            app.ui.mobile.show(Group::Navigator);
         }
     });
 }
@@ -174,9 +174,8 @@ pub fn tool_rail(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     crate::panels::toolbar(app, &mut child);
 }
 
-/// The contextual tool options strip. Reuses the existing options bar so the active tool's real
-/// controls appear; on a phone the strip is wide and short, which the options bar already supports
-/// (it wraps and scrolls).
+/// The contextual tool options strip. Reuses the existing options bar with horizontal scrolling
+/// and touch spacing so wide options sets never clip or overflow on phones.
 pub fn tool_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     if rect.width() < 8.0 || rect.height() < 8.0 {
         return;
@@ -186,7 +185,11 @@ pub fn tool_options(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     ui.painter().line_segment([pos2(rect.left(), rect.bottom()), pos2(rect.right(), rect.bottom())], Stroke::new(1.0, t.separator));
     let mut child = ui.new_child(egui::UiBuilder::new().max_rect(rect));
     child.set_clip_rect(rect.intersect(ui.clip_rect()));
-    crate::panels::options_bar(app, &mut child);
+
+    egui::ScrollArea::horizontal().id_salt("mobile-tool-options-scroll").auto_shrink([false, false]).show(&mut child, |ui| {
+        ui.spacing_mut().item_spacing.x = 8.0;
+        crate::panels::options_bar(app, ui);
+    });
 }
 
 /// The phone tool sheet: a touch-sized grid of the visible tool slots, laid out from the same

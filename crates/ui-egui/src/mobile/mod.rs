@@ -18,7 +18,9 @@ pub mod state;
 pub mod viewport;
 
 pub use device::{DeviceClass, Orientation};
-pub use panels::{HostKind, group_label, group_rail_icon, group_tabs, host_close_button, host_header, panel_host};
+pub use panels::{
+    HostKind, PanelPresentation, apply_touch_style, group_label, group_rail_icon, group_tabs, host_close_button, host_header, panel_host, with_touch_style,
+};
 pub use shell::{MobileShell, MobileShellLayout, OpenPanels, Region, RegionId, SheetHost, metrics, regions};
 pub use state::MobileUiState;
 pub use viewport::MobileViewport;
