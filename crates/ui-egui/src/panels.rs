@@ -133,69 +133,75 @@ fn c32(c: [f32; 4]) -> Color32 {
 #[allow(clippy::too_many_lines)]
 pub(crate) fn mobile_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, chrome: bool) {
     use crate::mobile::chrome as mc;
+    use crate::mobile::viewport::MobileViewport;
     let ctx = ui.ctx().clone();
     let class = mc::device_class(app, &ctx);
     let t = Tokens::get(&ctx);
     let backdrop = if chrome { crate::prefs_ui::pasteboard_color(app).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
 
-    match class {
+    let full_window = ctx.content_rect();
+    let safe_insets = egui::Margin::ZERO;
+    let tool_options_on = chrome && (crate::menus::is_enabled(app, "view.fitOnScreen") || app.session.active().is_some());
+    let vp = MobileViewport::compute(full_window, safe_insets, class, &app.ui.mobile.open_panels(), !chrome, tool_options_on);
+
+    match vp.class {
         crate::mobile::DeviceClass::Phone => {
             if chrome {
-                egui::Panel::top("mobile_top_bar").exact_size(crate::mobile::metrics::TOP_BAR_HEIGHT).frame(egui::Frame::NONE).show(ui, |ui| {
-                    mc::top_bar(app, ui, ui.max_rect());
-                });
-                egui::Panel::bottom("mobile_bottom_nav").exact_size(crate::mobile::metrics::BOTTOM_NAV_HEIGHT).frame(egui::Frame::NONE).show(ui, |ui| {
-                    mc::bottom_nav(app, ui, ui.max_rect());
-                });
-                if crate::menus::is_enabled(app, "view.fitOnScreen") || app.session.active().is_some() {
-                    egui::Panel::bottom("mobile_tool_options").exact_size(crate::mobile::metrics::TOOL_OPTIONS_HEIGHT).frame(egui::Frame::NONE).show(
-                        ui,
-                        |ui| {
-                            mc::tool_options(app, ui, ui.max_rect());
-                        },
-                    );
+                if let Some(top_r) = vp.top_bar {
+                    egui::Panel::top("mobile_top_bar").exact_size(top_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::top_bar(app, ui, top_r);
+                    });
+                }
+                if let Some(nav_r) = vp.bottom_nav {
+                    egui::Panel::bottom("mobile_bottom_nav").exact_size(nav_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::bottom_nav(app, ui, nav_r);
+                    });
+                }
+                if let Some(opts_r) = vp.tool_options {
+                    egui::Panel::bottom("mobile_tool_options").exact_size(opts_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::tool_options(app, ui, opts_r);
+                    });
                 }
             }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
-                let canvas_rect = ui.max_rect();
                 crate::canvas::document_area(app, ui);
-                // The bottom sheet floats over the canvas, so the canvas keeps its size while a
-                // panel is open (task: preserve editor state when panels open and close).
-                if chrome && let Some(group) = app.ui.mobile.open() {
-                    let h = app.ui.mobile.sheet_fraction.clamp(crate::mobile::shell::SHEET_MIN_FRACTION, crate::mobile::shell::SHEET_MAX_FRACTION)
-                        * canvas_rect.height();
-                    let sheet = Rect::from_min_max(pos2(canvas_rect.left(), canvas_rect.bottom() - h), canvas_rect.right_bottom());
-                    let mut overlay = ui.new_child(egui::UiBuilder::new().max_rect(sheet));
-                    overlay.set_clip_rect(sheet);
+                // The bottom sheet floats over the canvas using the canonical MobileViewport rectangle.
+                if chrome && let (Some(sheet_r), Some(group)) = (vp.sheet, app.ui.mobile.open()) {
+                    let mut overlay = ui.new_child(egui::UiBuilder::new().max_rect(sheet_r));
+                    overlay.set_clip_rect(sheet_r);
                     egui::Frame::NONE.fill(t.dock).show(&mut overlay, |ui| {
-                        crate::mobile::panel_host(app, ui, ui.max_rect(), crate::mobile::HostKind::BottomSheet, group);
+                        crate::mobile::panel_host(app, ui, sheet_r, crate::mobile::HostKind::BottomSheet, group);
                     });
                 }
             });
         }
         crate::mobile::DeviceClass::Tablet => {
             if chrome {
-                egui::Panel::top("mobile_top_bar").exact_size(crate::mobile::metrics::TOP_BAR_HEIGHT).frame(egui::Frame::NONE).show(ui, |ui| {
-                    mc::top_bar(app, ui, ui.max_rect());
-                });
-                egui::Panel::left("mobile_tool_rail").exact_size(crate::mobile::metrics::TOOL_RAIL_WIDTH).frame(egui::Frame::NONE).show(ui, |ui| {
-                    mc::tool_rail(app, ui, ui.max_rect());
-                });
-                if let Some(group) = app.ui.mobile.open() {
-                    let dock_w = crate::mobile::metrics::INSPECTOR_DOCK_WIDTH.min(ctx.content_rect().width() / 3.0);
-                    egui::Panel::right("mobile_inspector_dock").exact_size(dock_w).frame(egui::Frame::NONE).show(ui, |ui| {
-                        let r = ui.max_rect();
-                        let header = Rect::from_min_size(r.min, vec2(r.width(), crate::mobile::metrics::TOP_BAR_HEIGHT));
+                if let Some(top_r) = vp.top_bar {
+                    egui::Panel::top("mobile_top_bar").exact_size(top_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::top_bar(app, ui, top_r);
+                    });
+                }
+                if let Some(rail_r) = vp.tool_rail {
+                    egui::Panel::left("mobile_tool_rail").exact_size(rail_r.width()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::tool_rail(app, ui, rail_r);
+                    });
+                }
+                if let (Some(dock_r), Some(group)) = (vp.inspector_dock, app.ui.mobile.open()) {
+                    egui::Panel::right("mobile_inspector_dock").exact_size(dock_r.width()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        let header = egui::Rect::from_min_size(dock_r.min, egui::vec2(dock_r.width(), crate::mobile::metrics::TOP_BAR_HEIGHT));
                         if crate::mobile::host_header(ui, header, group, crate::mobile::group_label(group)) {
                             app.ui.mobile.hide();
                         }
-                        let body = Rect::from_min_max(pos2(r.left(), header.bottom()), r.right_bottom());
+                        let body = egui::Rect::from_min_max(egui::pos2(dock_r.left(), header.bottom()), dock_r.right_bottom());
                         crate::mobile::panel_host(app, ui, body, crate::mobile::HostKind::RightDock, group);
                     });
                 }
-                egui::Panel::bottom("mobile_tool_options").exact_size(crate::mobile::metrics::TOOL_OPTIONS_HEIGHT).frame(egui::Frame::NONE).show(ui, |ui| {
-                    mc::tool_options(app, ui, ui.max_rect());
-                });
+                if let Some(opts_r) = vp.tool_options {
+                    egui::Panel::bottom("mobile_tool_options").exact_size(opts_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                        mc::tool_options(app, ui, opts_r);
+                    });
+                }
             }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
                 crate::canvas::document_area(app, ui);

@@ -14,11 +14,13 @@ pub mod device;
 pub mod panels;
 pub mod shell;
 pub mod state;
+pub mod viewport;
 
 pub use device::{DeviceClass, Orientation};
 pub use panels::{HostKind, group_label, group_rail_icon, group_tabs, host_close_button, host_header, panel_host};
 pub use shell::{MobileShell, MobileShellLayout, OpenPanels, Region, RegionId, SheetHost, metrics, regions};
 pub use state::MobileUiState;
+pub use viewport::MobileViewport;
 
 #[cfg(test)]
 mod shell_tests;
