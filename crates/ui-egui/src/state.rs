@@ -555,6 +555,9 @@ pub struct UiState {
     pub camera_raw_scope: CameraRawScopeState,
     #[serde(default)]
     pub camera_raw_preview: CameraRawPreviewState,
+    /// Mobile-shell arrangement (device class, open panel host). Off by default.
+    #[serde(default)]
+    pub mobile: crate::mobile::MobileUiState,
 }
 
 impl Default for UiState {
@@ -670,6 +673,7 @@ impl Default for UiState {
             chrome: Default::default(),
             camera_raw_scope: Default::default(),
             camera_raw_preview: Default::default(),
+            mobile: Default::default(),
         }
     }
 }

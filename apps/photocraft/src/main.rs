@@ -374,6 +374,7 @@ fn main() -> eframe::Result {
         control: control_port,
         auth,
         automation,
+        mobile,
         mut launch_options,
     } = launch;
 
@@ -524,6 +525,15 @@ fn main() -> eframe::Result {
             let session = Session::new();
             PhotocraftApp::install_type_reset_hooks(&cc.egui_ctx);
             let mut app = PhotocraftApp::new(session, services);
+            // `--mobile [phone|tablet]`: start in the touch shell. "auto" (the bare flag) follows
+            // the window size; a class forces one for testing a layout on a desktop window.
+            if let Some(class) = mobile.as_deref() {
+                app.ui.mobile.enabled = true;
+                app.ui.mobile.force_class = match class {
+                    "phone" | "tablet" => Some(class.to_owned()),
+                    _ => None,
+                };
+            }
             app.min_frame_ms = uncapped.then_some(1000.0 / 240.0);
             app.integrated_titlebar = cfg!(target_os = "macos");
             app.custom_titlebar = custom_titlebar;

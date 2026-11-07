@@ -45,6 +45,7 @@ pub mod links;
 pub mod memory_warning;
 pub mod menu_catalog;
 pub mod menus;
+pub mod mobile;
 pub mod monitor_status;
 pub mod notices;
 pub mod os_window;

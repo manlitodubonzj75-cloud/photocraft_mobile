@@ -54,6 +54,10 @@ pub(crate) struct LaunchArgs {
     /// Start the localhost JSON-lines control server on this port
     #[arg(long, value_name = "PORT", env = "PHOTOCRAFT_CONTROL_PORT", value_parser = control_port, allow_negative_numbers = true)]
     pub(crate) control: Option<u16>,
+    /// Start with the mobile-first touch shell (bottom sheets, no permanent side panels). With no
+    /// value the device class follows the window size; `phone` or `tablet` forces one.
+    #[arg(long, value_name = "phone|tablet", num_args = 0..=1, default_missing_value = "auto")]
+    pub(crate) mobile: Option<String>,
     #[command(flatten)]
     pub(crate) auth: ControlArgs,
     #[command(flatten)]
@@ -79,6 +83,8 @@ pub(crate) enum PerProcess {
     PresentMode,
     FrameLatency,
     StrokeTrace,
+    /// `--mobile`: the touch shell is a per-process choice (a window sized for a phone).
+    Mobile,
     /// PHOTOCRAFT_GPU_ADAPTER, when startup will act on it (`gpu_startup`). Not a flag.
     GpuAdapterEnv,
 }
@@ -87,8 +93,16 @@ impl PerProcess {
     /// The flags, in the order a log line lists them. A flag's variable asks for the same thing, so
     /// it counts too (#7242); the variables that aren't a flag's fallback are counted by
     /// `single_instance::env_launch_options`.
-    pub(crate) const FLAGS: [PerProcess; 7] =
-        [Self::AutomationReadRoot, Self::AutomationWriteRoot, Self::SafeGpu, Self::InWindowMenus, Self::PresentMode, Self::FrameLatency, Self::StrokeTrace];
+    pub(crate) const FLAGS: [PerProcess; 8] = [
+        Self::AutomationReadRoot,
+        Self::AutomationWriteRoot,
+        Self::SafeGpu,
+        Self::InWindowMenus,
+        Self::PresentMode,
+        Self::FrameLatency,
+        Self::StrokeTrace,
+        Self::Mobile,
+    ];
 
     /// The flag's clap argument id.
     fn id(self) -> Option<&'static str> {
@@ -100,6 +114,7 @@ impl PerProcess {
             Self::PresentMode => "present_mode",
             Self::FrameLatency => "frame_latency",
             Self::StrokeTrace => "stroke_trace",
+            Self::Mobile => "mobile",
             Self::GpuAdapterEnv => return None,
         })
     }
@@ -115,6 +130,7 @@ impl fmt::Display for PerProcess {
             Self::PresentMode => "--present-mode",
             Self::FrameLatency => "--frame-latency",
             Self::StrokeTrace => "--stroke-trace",
+            Self::Mobile => "--mobile",
             Self::GpuAdapterEnv => "PHOTOCRAFT_GPU_ADAPTER",
         })
     }
@@ -280,6 +296,8 @@ mod tests {
             "Mailbox",
             "--frame-latency",
             "1",
+            "--mobile",
+            "phone",
             "photo.psd",
         ])
         .unwrap();
@@ -292,6 +310,7 @@ mod tests {
         assert_eq!(parsed.present_mode, Some(PresentMode::AutoNoVsync));
         assert_eq!(parsed.frame_latency, Some(1));
         assert_eq!(parsed.stroke_trace.as_deref(), Some("stderr"));
+        assert_eq!(parsed.mobile.as_deref(), Some("phone"));
         // In a fixed order: `single_instance` only lists them in a log line.
         assert_eq!(parsed.launch_options, PerProcess::FLAGS);
         assert_eq!(parsed.file_names(), FileNames { openable: vec!["photo.psd".to_string()], unreadable: vec![] });
@@ -299,6 +318,17 @@ mod tests {
         let parsed = parse_args(&["--control-token-file", "/tmp/token", "--new-instance"]).unwrap();
         assert_eq!(parsed.auth.control_token_file.as_deref(), Some(std::path::Path::new("/tmp/token")));
         assert!(parsed.launch_options.is_empty() && !parsed.in_window_menus, "{:?}", parsed.launch_options);
+    }
+
+    /// The mobile shell flag takes an optional class value: bare `--mobile` follows the window
+    /// size, `--mobile phone` / `--mobile tablet` force a layout. A bad value is a usage error.
+    #[test]
+    fn mobile_flag_takes_an_optional_class() {
+        assert_eq!(parse_args(&["--mobile"]).unwrap().mobile.as_deref(), Some("auto"));
+        assert_eq!(parse_args(&["--mobile", "phone"]).unwrap().mobile.as_deref(), Some("phone"));
+        assert_eq!(parse_args(&["--mobile", "tablet"]).unwrap().mobile.as_deref(), Some("tablet"));
+        // The class is one of the two named, or absent.
+        assert_eq!(parse_args(&[]).unwrap().mobile, None);
     }
 
     #[test]

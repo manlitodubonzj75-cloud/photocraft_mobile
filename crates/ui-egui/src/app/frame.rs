@@ -289,32 +289,39 @@ impl PhotocraftApp {
         }
         // In Full Screen Mode, Tab shows the menu bar, options bar, toolbar and dock (#6760).
         let tabbed_in = !chrome && self.ui.panels.full_screen_chrome;
-        if (chrome || tabbed_in) && self.ui.panels.menu_bar {
-            panels::title_bar(self, ui);
-        }
         // Home is only the menu bar and the Home content; the saved panel prefs are untouched.
         let home = self.home_screen_up();
-        if ((chrome && self.ui.panels.options_bar) || tabbed_in) && !home {
-            panels::options_bar(self, ui);
-        }
-        if chrome && self.ui.panels.status_bar && !home {
-            panels::status_bar(self, ui);
-        }
-        if ((chrome && self.ui.panels.toolbar) || tabbed_in) && !home {
-            panels::toolbar(self, ui);
-        }
-        // craft-ui's layout holds the canvas as its protected `canvas` panel.
-        let docking = ((chrome && self.ui.panels.dock) || tabbed_in) && !home;
-        if docking {
-            panels::dock_area(self, ui);
+        if self.ui.mobile.enabled && !home {
+            // The mobile arrangement replaces the desktop chrome entirely; the shared tail below
+            // (document windows, dialogs, notices, jobs) still runs unchanged, so nothing the
+            // desktop shows is dropped on a phone or tablet.
+            panels::mobile_body(self, ui, chrome || tabbed_in);
         } else {
-            let t = theme::Tokens::get(&ctx);
-            let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
-            egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
-                canvas::document_area(self, ui);
-            });
-            if !home {
-                panels::properties_window(self, &ctx);
+            if (chrome || tabbed_in) && self.ui.panels.menu_bar {
+                panels::title_bar(self, ui);
+            }
+            if ((chrome && self.ui.panels.options_bar) || tabbed_in) && !home {
+                panels::options_bar(self, ui);
+            }
+            if chrome && self.ui.panels.status_bar && !home {
+                panels::status_bar(self, ui);
+            }
+            if ((chrome && self.ui.panels.toolbar) || tabbed_in) && !home {
+                panels::toolbar(self, ui);
+            }
+            // craft-ui's layout holds the canvas as its protected `canvas` panel.
+            let docking = ((chrome && self.ui.panels.dock) || tabbed_in) && !home;
+            if docking {
+                panels::dock_area(self, ui);
+            } else {
+                let t = theme::Tokens::get(&ctx);
+                let backdrop = if chrome { prefs_ui::pasteboard_color(self).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
+                egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
+                    canvas::document_area(self, ui);
+                });
+                if !home {
+                    panels::properties_window(self, &ctx);
+                }
             }
         }
         // The floating editor windows belong to the editor: Home covers them (dialogs and notices
