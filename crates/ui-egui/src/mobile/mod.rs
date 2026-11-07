@@ -11,6 +11,7 @@
 
 pub mod chrome;
 pub mod device;
+pub mod input;
 pub mod panels;
 pub mod shell;
 pub mod state;
