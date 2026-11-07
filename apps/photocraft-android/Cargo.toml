@@ -1,0 +1,32 @@
+[package]
+name = "photocraft-android"
+description = "PhotoCraft Android app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[package.metadata.android]
+package = "com.photocraft.mobile"
+label = "PhotoCraft"
+min_sdk_version = 26
+target_sdk_version = 34
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[dependencies]
+photocraft-engine = { workspace = true }
+photocraft-io = { workspace = true }
+photocraft-codecs = { workspace = true }
+photocraft-doc = { workspace = true }
+photocraft-ui-egui = { workspace = true }
+eframe = { workspace = true, features = ["wgpu", "accesskit", "persistence"] }
+egui = { workspace = true }
+android-activity = { version = "0.6.1", features = ["native-activity"] }
+log = { workspace = true }
+winit = { version = "=0.30.13", default-features = false, features = ["android-native-activity"] }
