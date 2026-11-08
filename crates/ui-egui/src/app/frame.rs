@@ -291,6 +291,7 @@ impl PhotocraftApp {
         let tabbed_in = !chrome && self.ui.panels.full_screen_chrome;
         // Home is only the menu bar and the Home content; the saved panel prefs are untouched.
         let home = self.home_screen_up();
+        crate::mobile::theme::sync(&ctx, self.ui.mobile.enabled, self.ui.theme);
         if self.ui.mobile.enabled {
             if !home {
                 panels::mobile_body(self, ui, chrome || tabbed_in);

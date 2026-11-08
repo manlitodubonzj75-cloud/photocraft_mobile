@@ -5214,6 +5214,7 @@ dependencies = [
  "photocraft-codecs",
  "photocraft-doc",
  "photocraft-engine",
+ "photocraft-format",
  "photocraft-io",
  "photocraft-ui-egui",
  "winit",

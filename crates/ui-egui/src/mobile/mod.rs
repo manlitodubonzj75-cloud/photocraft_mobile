@@ -13,13 +13,16 @@ pub mod chrome;
 pub mod device;
 pub mod file_picker;
 pub mod input;
+pub mod lifecycle;
 pub mod panels;
 pub mod shell;
 pub mod state;
+pub mod theme;
 pub mod viewport;
 
 pub use device::{DeviceClass, Orientation};
 pub use file_picker::{ActivePicker, SharedPicker, mobile_file_dialog_service};
+pub use lifecycle::{GpuJobToken, LifecycleEffect, LifecycleEvent, LifecycleState, LifecycleTracker};
 pub use panels::{
     HostKind, PanelPresentation, apply_touch_style, group_label, group_rail_icon, group_tabs, host_close_button, host_header, panel_host, with_touch_style,
 };

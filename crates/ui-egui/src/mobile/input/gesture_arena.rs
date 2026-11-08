@@ -128,7 +128,11 @@ impl GestureArena {
 
         // 3. Multi-touch handling: if 2+ contacts are now active, navigate!
         if self.active_touches.len() >= 2 {
-            let cancel_action = if matches!(self.state, GestureState::TentativeStroke { .. }) { Some(GestureAction::CancelTentativeStroke) } else { None };
+            let cancel_action = if matches!(self.state, GestureState::TentativeStroke { .. } | GestureState::Drawing { .. }) {
+                Some(GestureAction::CancelTentativeStroke)
+            } else {
+                None
+            };
             self.state = GestureState::Navigating;
             return cancel_action.unwrap_or(GestureAction::None);
         }
@@ -169,10 +173,15 @@ impl GestureArena {
                 GestureAction::FeedStroke { x: doc_x, y: doc_y, pressure: sample.pressure.unwrap_or(1.0) }
             }
             GestureState::Navigating if self.active_touches.len() >= 2 => {
-                let mut iter = self.active_touches.values();
-                if let (Some(&(curr_a, _init_a, _)), Some(&(curr_b, _init_b, _))) = (iter.next(), iter.next()) {
-                    let prev_a = curr_a - (if sample.id == 0 { sample.position - prev_pos } else { egui::Vec2::ZERO });
-                    let prev_b = curr_b - (if sample.id != 0 { sample.position - prev_pos } else { egui::Vec2::ZERO });
+                let mut keys: Vec<u64> = self.active_touches.keys().copied().collect();
+                keys.sort_unstable();
+                if keys.len() >= 2 {
+                    let id_a = keys[0];
+                    let id_b = keys[1];
+                    let Some(&(curr_a, _, _)) = self.active_touches.get(&id_a) else { return GestureAction::None };
+                    let Some(&(curr_b, _, _)) = self.active_touches.get(&id_b) else { return GestureAction::None };
+                    let prev_a = if sample.id == id_a { prev_pos } else { curr_a };
+                    let prev_b = if sample.id == id_b { prev_pos } else { curr_b };
                     let delta = GestureDelta::from_two_touches(prev_a, prev_b, curr_a, curr_b);
                     GestureAction::Navigate(delta)
                 } else {

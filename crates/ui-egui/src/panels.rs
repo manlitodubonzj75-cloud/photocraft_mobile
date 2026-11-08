@@ -144,6 +144,7 @@ pub(crate) fn mobile_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, chrome: bo
     let safe_insets = egui::Margin { top: safe_top, bottom: 0, left: 0, right: 0 };
     let tool_options_on = chrome && (crate::menus::is_enabled(app, "view.fitOnScreen") || app.session.active().is_some());
     let vp = MobileViewport::compute(full_window, safe_insets, class, &app.ui.mobile.open_panels(), !chrome, tool_options_on);
+    dispatch_touch_router(app, ui, &vp);
 
     match vp.class {
         crate::mobile::DeviceClass::Phone => {
@@ -2273,4 +2274,48 @@ mod panel_state_migration_tests {
         migrate_panel_state(&ctx);
         assert_eq!(PanelState::load(&ctx, new).map(|p| p.size().x), Some(290.0));
     }
+}
+
+fn dispatch_touch_router(app: &mut PhotocraftApp, ui: &mut egui::Ui, vp: &crate::mobile::viewport::MobileViewport) {
+    let now_ms = (ui.input(|i| i.time) * 1000.0) as u64;
+    let layout = crate::mobile::input::LayoutSnapshot {
+        canvas_rect: vp.canvas,
+        ui_exclusion_rects: vp.touch_exclusion.clone(),
+        sheet_handle_rect: vp.sheet.map(|s| egui::Rect::from_min_size(s.min, egui::vec2(s.width(), 48.0))),
+        modal_open: !app.ui.dialogs.is_empty() || app.discard.is_some() || app.file_dialog.is_some(),
+    };
+
+    let events = ui.input(|i| i.events.clone());
+    let mut actions = Vec::new();
+    let stylus_active = app.stylus.is_pen_active();
+
+    for event in &events {
+        if let egui::Event::Touch { device_id, id, phase, pos, force } = event {
+            let ptr_phase = match phase {
+                egui::TouchPhase::Start => crate::mobile::input::PointerPhase::Down,
+                egui::TouchPhase::Move => crate::mobile::input::PointerPhase::Move,
+                egui::TouchPhase::End => crate::mobile::input::PointerPhase::Up,
+                egui::TouchPhase::Cancel => crate::mobile::input::PointerPhase::Cancel,
+            };
+            let kind = if stylus_active {
+                crate::mobile::input::PointerKind::Stylus
+            } else {
+                crate::mobile::input::PointerKind::Finger
+            };
+            let mut sample = crate::mobile::input::PointerSample::new(id.0, kind, ptr_phase, *pos, now_ms).with_device_id(device_id.0);
+            if let Some(f) = force {
+                sample = sample.with_pressure(*f);
+            }
+            let a = app.touch_router.process_sample(sample, &layout);
+            actions.extend(a);
+        }
+    }
+
+    let tick_actions = app.touch_router.tick(now_ms);
+    actions.extend(tick_actions);
+
+    let ctx = ui.ctx().clone();
+    let mut adapter = std::mem::take(&mut app.stroke_adapter);
+    adapter.apply_actions(app, actions, &ctx);
+    app.stroke_adapter = adapter;
 }

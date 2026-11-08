@@ -33,6 +33,7 @@ name = "android.permission.MANAGE_EXTERNAL_STORAGE"
 
 [dependencies]
 photocraft-engine = { workspace = true }
+photocraft-format = { workspace = true }
 photocraft-io = { workspace = true }
 photocraft-codecs = { workspace = true }
 photocraft-doc = { workspace = true }

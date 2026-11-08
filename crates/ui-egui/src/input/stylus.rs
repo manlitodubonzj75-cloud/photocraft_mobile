@@ -188,6 +188,10 @@ impl Stylus {
     }
 
     /// Track touch/pen contacts from this frame's input events.
+    pub fn is_pen_active(&self) -> bool {
+        self.touch_pen || self.sample().is_some()
+    }
+
     pub fn update(&mut self, events: &[egui::Event]) {
         if std::mem::take(&mut self.lifted) {
             self.touch = None;

@@ -40,6 +40,8 @@ impl PhotocraftApp {
             ui: UiState::default(),
             services,
             mobile_picker: std::sync::Arc::new(std::sync::Mutex::new(None)),
+            touch_router: crate::mobile::input::TouchRouter::new(),
+            stroke_adapter: crate::mobile::input::StrokeAdapter::new(),
             canvases: HashMap::new(),
             navigator_textures: HashMap::new(),
             display_memo: HashMap::new(),

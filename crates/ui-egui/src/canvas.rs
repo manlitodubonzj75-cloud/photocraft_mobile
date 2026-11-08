@@ -22,9 +22,9 @@ pub mod canvas_tool_menu;
 pub mod channel_view;
 mod cursors;
 mod display;
-mod drag;
+pub(crate) mod drag;
 mod filter_preview;
-mod gesture;
+pub(crate) mod gesture;
 pub mod gpu_canvas;
 pub mod guide_select;
 pub mod layer_pick_ui;
@@ -44,7 +44,7 @@ pub mod select_mask_view;
 mod selection;
 pub mod snap_ui;
 mod start_screen;
-mod strokes;
+pub(crate) mod strokes;
 pub(crate) mod tabs;
 mod textures;
 pub(super) mod tile_overlay;
@@ -52,7 +52,7 @@ pub mod tool_cursor;
 pub mod tool_feedback;
 mod tool_input;
 mod transform_controls;
-mod view_xform;
+pub(crate) mod view_xform;
 pub(crate) mod viewport_pages;
 pub mod wheel_nav;
 pub mod zoom_field;
@@ -854,6 +854,10 @@ fn handle_primary_canvas_input(app: &mut PhotocraftApp, ui: &mut egui::Ui, view:
             let d = xf.to_doc(p);
             tool_event(app, ToolEvent::Down { x: d[0], y: d[1], pressure: app.stylus.pressure() }, press_mods);
         }
+    }
+
+    if app.ui.mobile.enabled && app.touch_router.has_active_canvas_touch() {
+        return;
     }
 
     handle_canvas_tool_menus(app, input, mods, &mut buttons);

@@ -346,6 +346,8 @@ pub struct PhotocraftApp {
     pub ui: UiState,
     pub services: Services,
     pub mobile_picker: crate::mobile::file_picker::SharedPicker,
+    pub touch_router: crate::mobile::input::TouchRouter,
+    pub stroke_adapter: crate::mobile::input::StrokeAdapter,
     /// Canvas caches per (document, display): CPU textures hold monitor values; the GPU
     /// canvas state is shared (`canvas::GPU_OUTPUT`).
     canvases: HashMap<(DocId, u32), canvas::CanvasCache>,

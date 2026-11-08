@@ -1017,10 +1017,14 @@ pub fn mono(size: f32) -> FontId {
 
 /// Apply a theme to egui's global style and publish its tokens.
 pub fn apply(ctx: &egui::Context, kind: ThemeKind) {
+    apply_tokens(ctx, Tokens::for_kind(kind));
+}
+
+/// Apply specific tokens to egui's global style and publish them.
+pub fn apply_tokens(ctx: &egui::Context, t: Tokens) {
     // Keep native windows at SystemDefault so macOS continues reporting OS appearance changes,
     // including when an integration or restored egui state pinned its own theme preference.
     ctx.set_theme(egui::ThemePreference::System);
-    let t = Tokens::for_kind(kind);
     ctx.data_mut(|d| d.insert_temp(egui::Id::unique("photocraft-theme"), t));
     let mut v = if t.dark() { Visuals::dark() } else { Visuals::light() };
     v.panel_fill = t.chrome;

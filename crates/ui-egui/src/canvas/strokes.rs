@@ -352,7 +352,7 @@ pub(crate) fn stroke_command(app: &PhotocraftApp, tool: Tool) -> &'static str {
     if tool == Tool::Pencil || crate::eraser_ui::pencil_mode(app, tool) || crate::eraser_ui::block_mode(app, tool) { "paint.pencil" } else { "paint.stroke" }
 }
 
-pub(super) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
+pub(crate) fn begin_live_stroke(app: &PhotocraftApp) -> Option<LiveStroke> {
     static STROKES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let st = app.session.active()?;
     let d = app.drag.as_ref()?;
@@ -424,7 +424,7 @@ pub(crate) fn cancel_mixer_on_context_change(app: &mut PhotocraftApp, ctx: &egui
 
 /// Render the drag points the live stroke hasn't seen yet, with the pen pressure, tilt and
 /// rotation the commit's `paint.stroke` gets for them.
-pub(super) fn feed_live_stroke(app: &mut PhotocraftApp) {
+pub(crate) fn feed_live_stroke(app: &mut PhotocraftApp) {
     // A batched move replays several samples in one frame and calls this once at the end, so the
     // per-sample calls from `tool_event` are skipped (see `canvas_view`).
     if app.defer_live_stroke {
@@ -622,7 +622,7 @@ pub(super) fn draw_smoothing_string(painter: &egui::Painter, xf: &ViewXform, (br
 /// Commit a Brush, Pencil or Eraser drag. The live stroke already rendered it: its pixels are
 /// offered to the commit (`Session::offer_live_stroke`), so release costs no second render, and
 /// the canvas then refreshes only what it hadn't shown yet (`CommittedStroke`).
-pub(super) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
+pub(crate) fn commit_brush_stroke(app: &mut PhotocraftApp, d: &Drag) {
     let live = app.live_stroke.take();
     let mut p = stroke_params(app, d, &app.stylus.stroke_points(&d.points));
     if let Some(seed) = live.as_ref().and_then(|l| l.stroke.seed()) {
