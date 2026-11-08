@@ -57,6 +57,16 @@ pub fn resolve_sheet_snap(fraction: f32) -> Option<f32> {
     }
 }
 
+fn host_inner_rect(rect: Rect, kind: HostKind) -> Rect {
+    match kind {
+        HostKind::BottomSheet => Rect::from_min_max(
+            pos2(rect.left(), (rect.top() + 12.0).min(rect.bottom())),
+            rect.max,
+        ),
+        HostKind::RightDock => rect,
+    }
+}
+
 /// The frame the host draws around the panel: a rounded sheet pulled up from the bottom, or a flat
 /// dock at the side. The sheet gets an interactive grab handle that can be dragged to resize or snap.
 fn draw_host_frame(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect, kind: HostKind, t: &Tokens) {
@@ -109,10 +119,7 @@ pub fn panel_host(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect, kind: 
     let t = Tokens::get(ui.ctx());
     draw_host_frame(app, ui, rect, kind, &t);
 
-    let inner = match kind {
-        HostKind::BottomSheet => rect.shrink2(vec2(0.0, 0.0)).translate(vec2(0.0, 12.0)),
-        HostKind::RightDock => rect,
-    };
+    let inner = host_inner_rect(rect, kind);
     if inner.width() < 8.0 || inner.height() < 8.0 {
         return;
     }
@@ -222,6 +229,15 @@ mod tests {
         // Released near top snaps to full height
         assert_eq!(resolve_sheet_snap(0.65), Some(0.85));
         assert_eq!(resolve_sheet_snap(0.90), Some(0.85));
+    }
+
+    #[test]
+    fn sheet_content_stays_inside_host() {
+        let rect = Rect::from_min_size(pos2(0.0, 100.0), vec2(360.0, 300.0));
+        let inner = host_inner_rect(rect, HostKind::BottomSheet);
+        assert_eq!(inner.top(), 112.0);
+        assert_eq!(inner.bottom(), rect.bottom());
+        assert_eq!(host_inner_rect(rect, HostKind::RightDock), rect);
     }
 
     #[test]
