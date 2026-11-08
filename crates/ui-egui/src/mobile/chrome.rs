@@ -51,7 +51,8 @@ fn touch_icon(ui: &mut egui::Ui, name: &str, enabled: bool, selected: bool, tip:
 
 /// The mobile top bar: Back (to Home), the document title, Undo, Redo, Save and an overflow menu.
 ///
-/// Returns `true` if it handled a tap, so the caller can skip further chrome work that frame.
+/// Respects safe area top padding (status bar and notch) by painting chrome background across
+/// the full rect and placing controls in the bottom 44 pt.
 pub fn top_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     let t = Tokens::get(ui.ctx());
     if rect.height() < 8.0 {
@@ -61,8 +62,11 @@ pub fn top_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     painter.rect_filled(rect, CornerRadius::ZERO, t.chrome);
     painter.line_segment([pos2(rect.left(), rect.bottom()), pos2(rect.right(), rect.bottom())], Stroke::new(1.0, t.separator));
 
-    let ui = &mut ui.new_child(egui::UiBuilder::new().max_rect(rect));
-    ui.set_clip_rect(rect.intersect(ui.clip_rect()));
+    let bar_rect =
+        if rect.height() > metrics::TOP_BAR_HEIGHT { Rect::from_min_max(pos2(rect.left(), rect.bottom() - metrics::TOP_BAR_HEIGHT), rect.max) } else { rect };
+
+    let ui = &mut ui.new_child(egui::UiBuilder::new().max_rect(bar_rect));
+    ui.set_clip_rect(bar_rect.intersect(ui.clip_rect()));
     ui.horizontal_centered(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
         let has_doc = app.session.active().is_some();
@@ -88,12 +92,12 @@ pub fn top_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
             Some(d) => (d.doc.name.clone(), d.is_dirty()),
             None => (String::from("PhotoCraft"), false),
         };
-        let avail = (rect.width() - 6.0 * metrics::MIN_TOUCH_TARGET).max(40.0);
-        let label_r = Rect::from_center_size(ui.available_rect_before_wrap().center(), vec2(avail.min(ui.available_width()), rect.height()));
+        let avail = (bar_rect.width() - 6.0 * metrics::MIN_TOUCH_TARGET).max(40.0);
+        let label_r = Rect::from_center_size(ui.available_rect_before_wrap().center(), vec2(avail.min(ui.available_width()), bar_rect.height()));
         let text = if dirty { format!("{title} •") } else { title };
         let galley = crate::widgets::tab_strip::elided(ui, &text, theme::medium(14.0), t.text, label_r.width());
         ui.painter().galley(pos2(label_r.center().x - galley.size().x / 2.0, label_r.center().y - galley.size().y / 2.0), galley, t.text);
-        ui.allocate_space(vec2(avail.min(ui.available_width()), rect.height()));
+        ui.allocate_space(vec2(avail.min(ui.available_width()), bar_rect.height()));
 
         // Save and More, right-aligned.
         let save_on = has_doc && crate::menus::is_enabled(app, "file.save");
@@ -106,7 +110,7 @@ pub fn top_bar(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     });
 }
 
-/// The bottom navigation: Tools, Layers, Adjustments, Color, More. Each opens the corresponding
+/// The bottom navigation: Layers, Adjustments, Color, History, More. Each opens the corresponding
 /// real host or panel group; none is decorative.
 pub fn bottom_nav(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     let t = Tokens::get(ui.ctx());
@@ -116,11 +120,12 @@ pub fn bottom_nav(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
     ui.painter().rect_filled(rect, CornerRadius::ZERO, t.chrome);
     ui.painter().line_segment([pos2(rect.left(), rect.top()), pos2(rect.right(), rect.top())], Stroke::new(1.0, t.separator));
 
-    let entries: [(&str, &str, Group); 4] = [
+    let entries: [(&str, &str, Group); 5] = [
         ("layers", "Layers", Group::Layers),
         ("sliders-horizontal", "Adjustments", Group::Properties),
         ("palette", "Color", Group::Color),
         ("clock", "History", Group::History),
+        ("ellipsis-horizontal", "More", Group::Navigator),
     ];
     let n = entries.len() as f32;
     let w = rect.width() / n;
@@ -132,7 +137,7 @@ pub fn bottom_nav(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
         let tint = if on { t.accent } else { t.text_dim };
         let icon_r = Rect::from_center_size(pos2(cell.center().x, cell.top() + 20.0), vec2(20.0, 20.0));
         icons::paint(ui, icon_r, icon, 20.0, tint);
-        let galley = crate::widgets::tab_strip::elided(ui, label, theme::medium(10.0), tint, cell.width() - 8.0);
+        let galley = crate::widgets::tab_strip::elided(ui, tl!(*label), theme::medium(10.0), tint, cell.width() - 8.0);
         ui.painter().galley(pos2(cell.center().x - galley.size().x / 2.0, cell.bottom() - 18.0), galley, tint);
         resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
         if resp.clicked() {
@@ -141,19 +146,6 @@ pub fn bottom_nav(app: &mut PhotocraftApp, ui: &mut egui::Ui, rect: Rect) {
             } else {
                 app.ui.mobile.show(*group);
             }
-            ui.ctx().request_repaint();
-        }
-    }
-    // "More": opens the tool sheet-independent full panel list. Shown only if it fits, so a narrow
-    // phone still gets the four primary entries legibly.
-    let more = Rect::from_min_size(pos2(rect.right() - w, rect.top()), vec2(w, rect.height()));
-    if rect.width() >= 320.0 {
-        let resp = ui.interact(more, egui::Id::unique(("more", "nav")), Sense::click());
-        let galley = crate::widgets::tab_strip::elided(ui, tl!("More"), theme::medium(10.0), t.text_dim, more.width() - 8.0);
-        ui.painter().galley(pos2(more.center().x - galley.size().x / 2.0, more.bottom() - 18.0), galley, t.text_dim);
-        icons::paint(ui, Rect::from_center_size(pos2(more.center().x, more.top() + 20.0), vec2(20.0, 20.0)), "ellipsis-horizontal", 20.0, t.text_dim);
-        if resp.clicked() {
-            app.ui.mobile.show(Group::Navigator);
             ui.ctx().request_repaint();
         }
     }

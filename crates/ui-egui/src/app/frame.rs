@@ -291,11 +291,17 @@ impl PhotocraftApp {
         let tabbed_in = !chrome && self.ui.panels.full_screen_chrome;
         // Home is only the menu bar and the Home content; the saved panel prefs are untouched.
         let home = self.home_screen_up();
-        if self.ui.mobile.enabled && !home {
-            // The mobile arrangement replaces the desktop chrome entirely; the shared tail below
-            // (document windows, dialogs, notices, jobs) still runs unchanged, so nothing the
-            // desktop shows is dropped on a phone or tablet.
-            panels::mobile_body(self, ui, chrome || tabbed_in);
+        if self.ui.mobile.enabled {
+            if !home {
+                panels::mobile_body(self, ui, chrome || tabbed_in);
+            } else {
+                let t = theme::Tokens::get(&ctx);
+                let backdrop = t.canvas;
+                egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {
+                    ui.add_space(36.0);
+                    canvas::document_area(self, ui);
+                });
+            }
         } else {
             if (chrome || tabbed_in) && self.ui.panels.menu_bar {
                 panels::title_bar(self, ui);
@@ -337,6 +343,7 @@ impl PhotocraftApp {
         }
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);
+        crate::mobile::file_picker::render(&self.mobile_picker, &ctx);
         layers_panel_ui::show_dialog(self, &ctx);
         rasterize_prompt::run_pending(self, &ctx);
         jobs_ui::dialog(self, &ctx);

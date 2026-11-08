@@ -39,6 +39,7 @@ impl PhotocraftApp {
             session,
             ui: UiState::default(),
             services,
+            mobile_picker: std::sync::Arc::new(std::sync::Mutex::new(None)),
             canvases: HashMap::new(),
             navigator_textures: HashMap::new(),
             display_memo: HashMap::new(),

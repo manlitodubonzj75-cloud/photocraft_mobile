@@ -106,7 +106,9 @@ impl MobileViewport {
                 touch_exclusion.push(bottom_nav);
 
                 // Tool Options: sits directly above the bottom nav within safe horizontal bounds.
-                let tool_options = if tool_options_visible {
+                // Hidden when an overlay bottom sheet is open so the sheet can span cleanly down to bottom nav.
+                let sheet_open = panels.host(class) == SheetHost::BottomSheet;
+                let tool_options = if tool_options_visible && !sheet_open {
                     let opts = Rect::from_min_max(pos2(window.min.x, bottom_nav.min.y - metrics::TOOL_OPTIONS_HEIGHT), pos2(window.max.x, bottom_nav.min.y));
                     touch_exclusion.push(opts);
                     Some(opts)

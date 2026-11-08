@@ -140,7 +140,8 @@ pub(crate) fn mobile_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, chrome: bo
     let backdrop = if chrome { crate::prefs_ui::pasteboard_color(app).unwrap_or(t.canvas) } else { egui::Color32::BLACK };
 
     let full_window = ctx.content_rect();
-    let safe_insets = egui::Margin::ZERO;
+    let safe_top = if app.ui.mobile.enabled { 36 } else { 0 };
+    let safe_insets = egui::Margin { top: safe_top, bottom: 0, left: 0, right: 0 };
     let tool_options_on = chrome && (crate::menus::is_enabled(app, "view.fitOnScreen") || app.session.active().is_some());
     let vp = MobileViewport::compute(full_window, safe_insets, class, &app.ui.mobile.open_panels(), !chrome, tool_options_on);
 
@@ -158,9 +159,11 @@ pub(crate) fn mobile_body(app: &mut PhotocraftApp, ui: &mut egui::Ui, chrome: bo
                     });
                 }
                 if let Some(opts_r) = vp.tool_options {
-                    egui::Panel::bottom("mobile_tool_options").exact_size(opts_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
-                        mc::tool_options(app, ui, opts_r);
-                    });
+                    if app.ui.mobile.open().is_none() {
+                        egui::Panel::bottom("mobile_tool_options").exact_size(opts_r.height()).frame(egui::Frame::NONE).show(ui, |ui| {
+                            mc::tool_options(app, ui, opts_r);
+                        });
+                    }
                 }
             }
             egui::CentralPanel::default().frame(egui::Frame::NONE.fill(backdrop)).show(ui, |ui| {

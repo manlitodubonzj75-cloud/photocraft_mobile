@@ -58,10 +58,7 @@ impl MobileUiState {
 
     /// Construct an [`OpenPanels`] snapshot for viewport geometry calculations.
     pub fn open_panels(&self) -> crate::mobile::shell::OpenPanels {
-        crate::mobile::shell::OpenPanels {
-            group: self.open(),
-            sheet_fraction: self.sheet_fraction,
-        }
+        crate::mobile::shell::OpenPanels { group: self.open(), sheet_fraction: self.sheet_fraction }
     }
 
     /// The class to lay out for, from the forced value (for tests) or the viewport.
